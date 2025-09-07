@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖文整合工具</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+    <header class="author-banner">
+        <p>BY stellarwhale1132 鯨</p>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <h2>管理面板</h2>
+            <div class="sidebar-section">
+                <button id="export-data-btn" class="sidebar-btn"><i class="fa-solid fa-file-export"></i> 匯出備份 (.json)</button>
+                <button id="import-data-btn" class="sidebar-btn"><i class="fa-solid fa-file-import"></i> 匯入備份 (.json)</button>
+                <input type="file" id="import-file-input" accept=".json" style="display: none;">
+            </div>
+
+            <div class="sidebar-section">
+                <h3>分類</h3>
+                <ul id="category-list" class="filter-list">
+                    <li data-category="all" class="active">全部圖片</li>
+                    <li data-category="favorites"><i class="fa-solid fa-star"></i> 我的最愛</li>
+                    <li data-category="uncategorized">未分類</li>
+                </ul>
+                <div class="add-category-form">
+                    <input type="text" id="new-category-input" placeholder="新增分類名稱...">
+                    <button id="add-category-btn"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>標籤</h3>
+                <div id="tag-list" class="tag-cloud">
+                    </div>
+            </div>
+
+            <div class="theme-switcher">
+                <span>日間模式</span>
+                <label class="switch">
+                    <input type="checkbox" id="theme-toggle">
+                    <span class="slider round"></span>
+                </label>
+                <span>夜間模式</span>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="add-item-area" id="drop-zone">
+                <h3>新增項目</h3>
+                <p>選擇檔案或直接將圖片貼上 (Ctrl+V) / 拖曳到此處</p>
+                <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                <button id="upload-btn" class="main-btn"><i class="fa-solid fa-upload"></i> 選擇圖片</button>
+                
+                <div class="input-group">
+                    <label for="note-input">備註文字 (例如 AI Prompt)</label>
+                    <textarea id="note-input" rows="4" placeholder="在這裡輸入備註..."></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="tag-input">標籤 (用逗號 , 分隔)</label>
+                    <input type="text" id="tag-input" placeholder="例如: 風景, 夜晚, Niji">
+                </div>
+                <button id="add-item-btn" class="main-btn">新增</button>
+            </div>
+
+            <div id="image-grid">
+                </div>
+        </main>
+    </div>
+
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>編輯項目</h2>
+            <input type="hidden" id="edit-id-input">
+            <div class="input-group">
+                <label for="edit-note-input">備註文字</label>
+                <textarea id="edit-note-input" rows="5"></textarea>
+            </div>
+            <div class="input-group">
+                <label for="edit-tag-input">標籤 (用逗號 , 分隔)</label>
+                <input type="text" id="edit-tag-input">
+            </div>
+             <div class="input-group">
+                <label for="edit-category-select">移動到分類</label>
+                <select id="edit-category-select"></select>
+            </div>
+            <button id="save-edit-btn" class="main-btn">儲存變更</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
