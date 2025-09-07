@@ -441,3 +441,35 @@
 .btn-view:hover {
     color: var(--success-color); /* 使用綠色作為提示色 */
 }
+/* --- 分類列表編輯/刪除按鈕的新增樣式 --- */
+.filter-list li {
+    position: relative; /* 讓圖示可以相對於 li 定位 */
+}
+
+.category-actions {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none; /* 預設隱藏 */
+    gap: 8px;
+}
+
+.filter-list li:hover .category-actions {
+    display: flex; /* 滑鼠滑過 li 時顯示 */
+}
+
+.category-actions i {
+    cursor: pointer;
+    color: var(--secondary-color);
+    transition: color 0.2s;
+    font-size: 0.9em;
+}
+
+.category-actions .btn-edit-category:hover {
+    color: var(--primary-color);
+}
+
+.category-actions .btn-delete-category:hover {
+    color: var(--danger-color);
+}
