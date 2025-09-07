@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const CATEGORIES_STORE_NAME = 'categories';
     let db;
 
-    // 1. 初始化資料庫
     function initDB() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -45,14 +44,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     db.createObjectStore(ITEMS_STORE_NAME, { keyPath: 'id' });
                 }
                 if (!db.objectStoreNames.contains(CATEGORIES_STORE_NAME)) {
-                    // 分類比較簡單，直接用 id 作為主鍵
                     db.createObjectStore(CATEGORIES_STORE_NAME, { autoIncrement: true });
                 }
             };
         });
     }
 
-    // 2. 獲取所有資料
     function getAllData(storeName) {
         return new Promise((resolve, reject) => {
             const transaction = db.transaction(storeName, 'readonly');
@@ -63,12 +60,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 3. 儲存所有資料 (先清空再全部寫入)
     function saveDataToDB(storeName, data) {
         return new Promise((resolve, reject) => {
             const transaction = db.transaction(storeName, 'readwrite');
             const store = transaction.objectStore(storeName);
-            store.clear(); // 清空舊資料
+            store.clear();
             data.forEach(item => store.put(item));
             transaction.oncomplete = () => resolve();
             transaction.onerror = (event) => reject('Error saving data: ' + event.target.error);
@@ -90,16 +86,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!movedItem) return;
             items = items.filter(item => item.id !== evt.item.dataset.id);
             items.splice(evt.newIndex, 0, movedItem);
-            await saveData(); // 非同步儲存
+            await saveData();
         },
     });
 
-    // --- 資料處理函式 (已改為 async/await) ---
+    // --- 資料處理函式 ---
     async function saveData() {
-        // 並行儲存 items 和 categories，更有效率
         await Promise.all([
             saveDataToDB(ITEMS_STORE_NAME, items),
-            saveDataToDB(CATEGORIES_STORE_NAME, categories.map(c => ({name: c}))) // 將字串陣列轉為物件陣列儲存
+            saveDataToDB(CATEGORIES_STORE_NAME, categories.map(c => ({name: c})))
         ]);
     }
 
@@ -109,12 +104,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             getAllData(CATEGORIES_STORE_NAME)
         ]);
         items = loadedItems || [];
-        // 從物件陣列還原回字串陣列
         const categoryNames = loadedCategoriesObj.map(c => c.name);
         categories = categoryNames.length > 0 ? categoryNames : ['預設分類'];
     }
 
-    // --- 渲染函式 (與之前版本相同) ---
+    // --- 渲染函式 ---
     const renderItems = () => {
         imageGrid.innerHTML = '';
         const filteredItems = items.filter(item => {
@@ -150,20 +144,39 @@ document.addEventListener('DOMContentLoaded', async () => {
             imageGrid.appendChild(card);
         });
     };
+    
+    // **已更新：在渲染分類時，加入編輯與刪除按鈕**
     const renderCategories = () => {
-        const customCategories = categoryList.querySelectorAll('li:not([data-category="all"]):not([data-category="favorites"]):not([data-category="uncategorized"])');
-        customCategories.forEach(li => li.remove());
-        const favoritesLi = categoryList.querySelector('li[data-category="favorites"]');
-        categories.forEach(cat => {
+        const customCategoriesContainer = categoryList.querySelector('li[data-category="uncategorized"]');
+        // 清除舊的自訂分類
+        const oldCustomCategories = categoryList.querySelectorAll('.custom-category');
+        oldCustomCategories.forEach(li => li.remove());
+        
+        // 從後往前插入，確保順序正確
+        [...categories].reverse().forEach(cat => {
             if (cat !== "預設分類") {
                 const li = document.createElement('li');
                 li.dataset.category = cat;
-                li.textContent = cat;
-                categoryList.insertBefore(li, favoritesLi.nextSibling);
+                li.classList.add('custom-category'); // 加上 class 以便識別
+                
+                const categoryName = document.createElement('span');
+                categoryName.textContent = cat;
+
+                const actions = document.createElement('div');
+                actions.className = 'category-actions';
+                actions.innerHTML = `
+                    <i class="fa-solid fa-pencil btn-edit-category" title="重新命名"></i>
+                    <i class="fa-solid fa-trash btn-delete-category" title="刪除分類"></i>
+                `;
+                
+                li.appendChild(categoryName);
+                li.appendChild(actions);
+                customCategoriesContainer.insertAdjacentElement('afterend', li);
             }
         });
         updateActiveFilter();
     };
+
     const renderTags = () => {
         const allTags = new Set(items.flatMap(item => item.tags));
         tagListContainer.innerHTML = '';
@@ -176,6 +189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
          updateActiveFilter();
     };
+
     const updateActiveFilter = () => {
         document.querySelectorAll('.filter-list li, .tag-cloud .tag').forEach(el => {
             el.classList.remove('active');
@@ -186,13 +200,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     };
+    
     const refreshApp = () => {
         renderCategories();
         renderTags();
         renderItems();
     };
 
-    // --- 核心功能函式 (改為 async) ---
+    // --- 核心功能函式 ---
     async function handleFile(file) {
         if (!file || !file.type.startsWith('image/')) return;
         const reader = new FileReader();
@@ -233,7 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- 事件監聽器 (部分改為 async) ---
+    // --- 事件監聽器 ---
     uploadBtn.addEventListener('click', () => imageUpload.click());
     imageUpload.addEventListener('change', (e) => {
         if (e.target.files.length > 0) handleFile(e.target.files[0]);
@@ -248,24 +263,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
     });
-
+    
     imageGrid.addEventListener('click', async (e) => {
         const target = e.target.closest('button.action-btn, .favorite-btn');
         if (!target) return;
-
         const card = target.closest('.image-card');
         const id = card.dataset.id;
         const itemIndex = items.findIndex(item => item.id === id);
         if (itemIndex === -1) return;
-
+        
         if (target.classList.contains('btn-view')) {
             alert(`完整備註：\n\n${items[itemIndex].note || '(無備註)'}`);
         }
-
         if (target.classList.contains('btn-copy')) {
             navigator.clipboard.writeText(items[itemIndex].note || '').then(() => alert('備註已複製！'));
         }
-
         if (target.classList.contains('btn-delete')) {
             if (confirm('確定要刪除這個項目嗎？')) {
                 items.splice(itemIndex, 1);
@@ -273,7 +285,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 refreshApp();
             }
         }
-
         if (target.classList.contains('btn-edit')) {
             const item = items[itemIndex];
             editIdInput.value = id;
@@ -289,8 +300,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             editModal.style.display = 'flex';
         }
-
-        if (target.classList.contains('favorite-btn')) {
+        if (target.classList.contains('btn-favorite')) {
             items[itemIndex].isFavorite = !items[itemIndex].isFavorite;
             await saveData();
             refreshApp();
@@ -301,7 +311,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.addEventListener('click', (e) => {
         if (e.target === editModal) editModal.style.display = 'none';
     });
-
+    
     saveEditBtn.addEventListener('click', async () => {
         const id = editIdInput.value;
         const itemIndex = items.findIndex(item => item.id === id);
@@ -329,19 +339,78 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Enter') addCategoryBtn.click();
     });
 
-    categoryList.addEventListener('click', (e) => {
-        if (e.target.tagName === 'LI') {
-            const category = e.target.dataset.category;
-            if (['favorites', 'uncategorized', 'all'].includes(category)) {
-                currentFilter = { type: category, value: category };
+    // **已更新：分類列表的事件監聽器，現在包含編輯與刪除邏輯**
+    categoryList.addEventListener('click', async (e) => {
+        const target = e.target;
+        const parentLi = target.closest('li');
+        if (!parentLi) return;
+
+        const categoryName = parentLi.dataset.category;
+
+        // 點擊刪除按鈕
+        if (target.classList.contains('btn-delete-category')) {
+            if (confirm(`確定要刪除「${categoryName}」分類嗎？\n(此分類中的圖片將會被移至「預設分類」)`)) {
+                // 找出所有屬於此分類的項目，並更新它們的分類
+                items.forEach(item => {
+                    if (item.category === categoryName) {
+                        item.category = '預設分類';
+                    }
+                });
+                // 從分類列表中移除
+                categories = categories.filter(c => c !== categoryName);
+                
+                // 如果當前篩選的是被刪除的分類，就切回'all'
+                if(currentFilter.type === 'category' && currentFilter.value === categoryName) {
+                    currentFilter = { type: 'all', value: 'all' };
+                }
+
+                await saveData();
+                refreshApp();
+            }
+        }
+        // 點擊編輯按鈕
+        else if (target.classList.contains('btn-edit-category')) {
+            const newCategoryName = prompt(`請輸入「${categoryName}」的新名稱：`, categoryName);
+            if (newCategoryName && newCategoryName.trim() !== '' && newCategoryName !== categoryName) {
+                const trimmedNewName = newCategoryName.trim();
+                // 檢查新名稱是否已存在
+                if (categories.includes(trimmedNewName)) {
+                    alert(`分類名稱「${trimmedNewName}」已存在！`);
+                    return;
+                }
+                // 更新分類列表
+                const categoryIndex = categories.findIndex(c => c === categoryName);
+                if (categoryIndex !== -1) {
+                    categories[categoryIndex] = trimmedNewName;
+                }
+                // 更新所有相關項目的分類
+                items.forEach(item => {
+                    if (item.category === categoryName) {
+                        item.category = trimmedNewName;
+                    }
+                });
+                
+                // 如果當前篩選的是被修改的分類，就更新篩選值
+                 if(currentFilter.type === 'category' && currentFilter.value === categoryName) {
+                    currentFilter.value = trimmedNewName;
+                }
+
+                await saveData();
+                refreshApp();
+            }
+        }
+        // 點擊分類本身進行篩選 (原有功能)
+        else {
+            if (['favorites', 'uncategorized', 'all'].includes(categoryName)) {
+                currentFilter = { type: categoryName, value: categoryName };
             } else {
-                currentFilter = { type: 'category', value: category };
+                currentFilter = { type: 'category', value: categoryName };
             }
             updateActiveFilter();
             renderItems();
         }
     });
-
+    
     tagListContainer.addEventListener('click', (e) => {
          if (e.target.classList.contains('tag')) {
             const tag = e.target.dataset.tag;
@@ -354,7 +423,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderItems();
         }
     });
-
+    
     exportBtn.addEventListener('click', () => {
         if (items.length === 0) return alert('沒有資料可以匯出。');
         const dataStr = JSON.stringify({ items, categories });
@@ -395,7 +464,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     importBtn.addEventListener('click', () => importFileInput.click());
-
+    
     themeToggle.addEventListener('change', () => {
         document.body.classList.toggle('dark-mode', themeToggle.checked);
         localStorage.setItem('theme', themeToggle.checked ? 'dark' : 'light');
@@ -408,12 +477,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             themeToggle.checked = true;
         }
     };
-
+    
     // --- 應用程式啟動主函式 ---
     async function main() {
         await initDB();
-
-        // **自動資料轉移**
         const oldData = localStorage.getItem('imageDataApp');
         if (oldData) {
             if (confirm('偵測到 localStorage 中的舊資料，是否要轉移到新的 IndexedDB 資料庫？\n(此操作只會進行一次)')) {
@@ -429,7 +496,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         }
-
         await loadData();
         loadTheme();
         refreshApp();
