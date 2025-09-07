@@ -145,19 +145,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
     
-    // **已更新：在渲染分類時，加入編輯與刪除按鈕**
     const renderCategories = () => {
         const customCategoriesContainer = categoryList.querySelector('li[data-category="uncategorized"]');
-        // 清除舊的自訂分類
         const oldCustomCategories = categoryList.querySelectorAll('.custom-category');
         oldCustomCategories.forEach(li => li.remove());
         
-        // 從後往前插入，確保順序正確
         [...categories].reverse().forEach(cat => {
             if (cat !== "預設分類") {
                 const li = document.createElement('li');
                 li.dataset.category = cat;
-                li.classList.add('custom-category'); // 加上 class 以便識別
+                li.classList.add('custom-category');
                 
                 const categoryName = document.createElement('span');
                 categoryName.textContent = cat;
@@ -300,7 +297,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             editModal.style.display = 'flex';
         }
-        if (target.classList.contains('btn-favorite')) {
+        
+        // **BUG 修正點：將 'btn-favorite' 改為正確的 'favorite-btn'**
+        if (target.classList.contains('favorite-btn')) {
             items[itemIndex].isFavorite = !items[itemIndex].isFavorite;
             await saveData();
             refreshApp();
@@ -339,7 +338,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Enter') addCategoryBtn.click();
     });
 
-    // **已更新：分類列表的事件監聽器，現在包含編輯與刪除邏輯**
     categoryList.addEventListener('click', async (e) => {
         const target = e.target;
         const parentLi = target.closest('li');
@@ -347,59 +345,45 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const categoryName = parentLi.dataset.category;
 
-        // 點擊刪除按鈕
         if (target.classList.contains('btn-delete-category')) {
             if (confirm(`確定要刪除「${categoryName}」分類嗎？\n(此分類中的圖片將會被移至「預設分類」)`)) {
-                // 找出所有屬於此分類的項目，並更新它們的分類
                 items.forEach(item => {
                     if (item.category === categoryName) {
                         item.category = '預設分類';
                     }
                 });
-                // 從分類列表中移除
                 categories = categories.filter(c => c !== categoryName);
-                
-                // 如果當前篩選的是被刪除的分類，就切回'all'
                 if(currentFilter.type === 'category' && currentFilter.value === categoryName) {
                     currentFilter = { type: 'all', value: 'all' };
                 }
-
                 await saveData();
                 refreshApp();
             }
         }
-        // 點擊編輯按鈕
         else if (target.classList.contains('btn-edit-category')) {
             const newCategoryName = prompt(`請輸入「${categoryName}」的新名稱：`, categoryName);
             if (newCategoryName && newCategoryName.trim() !== '' && newCategoryName !== categoryName) {
                 const trimmedNewName = newCategoryName.trim();
-                // 檢查新名稱是否已存在
                 if (categories.includes(trimmedNewName)) {
                     alert(`分類名稱「${trimmedNewName}」已存在！`);
                     return;
                 }
-                // 更新分類列表
                 const categoryIndex = categories.findIndex(c => c === categoryName);
                 if (categoryIndex !== -1) {
                     categories[categoryIndex] = trimmedNewName;
                 }
-                // 更新所有相關項目的分類
                 items.forEach(item => {
                     if (item.category === categoryName) {
                         item.category = trimmedNewName;
                     }
                 });
-                
-                // 如果當前篩選的是被修改的分類，就更新篩選值
                  if(currentFilter.type === 'category' && currentFilter.value === categoryName) {
                     currentFilter.value = trimmedNewName;
                 }
-
                 await saveData();
                 refreshApp();
             }
         }
-        // 點擊分類本身進行篩選 (原有功能)
         else {
             if (['favorites', 'uncategorized', 'all'].includes(categoryName)) {
                 currentFilter = { type: categoryName, value: categoryName };
